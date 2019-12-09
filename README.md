@@ -1,7 +1,7 @@
 # GEOL590final
 R code and data for GEOL 590 final project
 
-HTML file contains final report, knitted from R markdown file also in this repository. 
+HTML file contains final report (dburow_finalproj.html), knitted from R markdown file (dburow_finalproj.rmd) also in this repository. 
 
 The tif files are rasters representing red reflectance change in coastal NC following Hurricane Florence.
 
