@@ -1,7 +1,9 @@
 # GEOL590final
 R code and data for GEOL 590 final project
 
-These files are rasters representing changes in coastal NC red reflectance following Hurricane Florence.
+HTML file contains final report, knitted from R markdown file also in this repository. 
+
+The tif files are rasters representing red reflectance change in coastal NC following Hurricane Florence.
 
 The composite tif represents changes in red reflectance derived from two MODIS eight-day composite images (08 to 16 Oct minus 22 Sep to 30 Sep).
 The single day tif represents changes in red reflectance derived from two MODIS single day images (13 Oct minus 27 Sep) that were relatively cloud free. 
