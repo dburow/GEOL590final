@@ -1,0 +1,229 @@
+Hurricane Florence made landfall near Wrightsville Beach, North
+Carolina, on 14 September 2018 (Stewart and Berg 2019). Florence moved
+very slowly through the region, and its long residence time allowed for
+extreme precipitation totals that exceeded 20 inches in much of the
+coastal North Carolina region. Precipitation pulses such as this one
+affect the hydrological cycle by washing organic matter and increasing
+runoff into local rivers (Raymond et al. 2016; Chen et al. 2019).
+
+Here, I use MODIS imagery of red band reflectance to examine spectral
+changes in the waters offshore of Cape Hatteras. Red reflectance has
+been used in studies such as Miller and McKee (2004) to measure
+suspended particulate matter, and as a key variable in turbidity
+calculations in the coastal Southeast by Joshi et al. (2017). MODIS
+imagery has a spatial resolution of 250 meters in the visible spectrum,
+and a one-day temporal resolution.
+
+I used four separate images of the Atlantic Ocean within 150 kilometers
+of Cape Hatteras for this procedure. Two of them were composite images
+compiled by NASA over eight consecutive days (22 September to 30
+September and 08 October to 16 October) with the goal of representing
+cloud-free conditions over these eight-day two eight day spans. The
+other two images were single-day images obtained on 27 September and 13
+October, days that had few clouds in the region. None of the four
+regions are completely free from cloud contamination, so I applied a
+simple mask to exclude pixels with red reflectance greater than 0.10,
+because it is very unlikely for sea water to exhibit reflectance of this
+value in the red band, while cloudy regions tend to have greater red
+reflectance values than this. Portable network graphic (.png) files of
+difference images derived from the two compsite images can be found at:
+<a href="https://github.com/dburow/GEOL590final/blob/master/compositediffmap.png" class="uri">https://github.com/dburow/GEOL590final/blob/master/compositediffmap.png</a>
+and from the single-day images at:
+<a href="https://github.com/dburow/GEOL590final/blob/master/singledaydiffmap.png" class="uri">https://github.com/dburow/GEOL590final/blob/master/singledaydiffmap.png</a>.
+
+The following chunk creates a histogram comparing red reflectance change
+values in the coastal Cape Hatteras derived from composite imagery in
+red and single-day image in blue. It uses two separate rasters that can
+be found at
+<a href="https://github.com/dburow/GEOL590final/blob/master/compositediff.tif" class="uri">https://github.com/dburow/GEOL590final/blob/master/compositediff.tif</a>
+(composite) and
+<a href="https://github.com/dburow/GEOL590final/blob/master/singledaydiff.tif" class="uri">https://github.com/dburow/GEOL590final/blob/master/singledaydiff.tif</a>
+(single day).
+
+    #Produces combined histogram of red reflectance changes derived from composite imagery and single day imagery
+    #BEFORE RUNNING:
+    #> uncomment package installation as needed
+    #> correct filepaths for TIFFs
+
+    ##install.packages("ggplot2")
+    ##install.packages("raster")
+    library(ggplot2)
+    library(raster)
+
+    ## Loading required package: sp
+
+    #Filepaths in following two lines will need to be changed as needed
+    change1 <- raster(x = "compositediff.tif")#filepath for composite tif
+    change2 <- raster(x = "singledaydiff.tif")#filepath for single-day tif
+    #Define rasters as data frames makes them work in ggplot
+    change1_df <- as.data.frame(values(change1))
+    change2_df <- as.data.frame(values(change2))
+
+    #There's lots of null values in each raster that need to be omitted
+    df_values1 <- na.omit(change1_df)
+    df_values2 <- na.omit(change2_df)
+
+    #put values into column with same name so rbind works
+    df_values1$value <- df_values1$`values(change1)`
+    df_values2$value <- df_values2$`values(change2)`
+
+
+    #select value column to get rid of values(change1) column that messes up rbind
+    df_filter1 <- subset(df_values1, value < 1000, select = c("value"))
+    df_filter2 <- subset(df_values2, value < 1000, select = c("value"))
+
+    #we need to cast them as strings apparently
+    str(df_filter1)
+
+    ## 'data.frame':    69809 obs. of  1 variable:
+    ##  $ value: int  -29 -26 -38 -11 16 -15 55 26 25 16 ...
+
+    str(df_filter2)
+
+    ## 'data.frame':    69239 obs. of  1 variable:
+    ##  $ value: int  -29 -26 -38 -11 16 -15 -26 -52 25 16 ...
+
+    #Define a variable that will differentiate them after rbind
+    df_filter1$timestep <- "Composite"
+    df_filter2$timestep <- "Single Day"
+
+    #combine data into single object
+    allchange <- rbind(df_filter1, df_filter2)
+
+    #density histogram
+    combhist <- ggplot(allchange, aes(value, fill = timestep)) + geom_density(alpha=0.2)
+
+    #color code and label appropriately
+    #Few change values exist beyond 200 on x axis
+    combhist + scale_fill_manual(breaks = c("Composite", "Single Day"),
+                                 values=c("blue", "red")) + 
+      ggtitle("Coastal region Composite (blue) and Single Day (red)") + 
+      xlab("Red Reflectance Change") + 
+      ylab("Density") + 
+      xlim(-200, 200) +
+      theme(legend.title = element_blank())
+
+    ## Warning: Removed 2350 rows containing non-finite values (stat_density).
+
+![](dburow_finalproj_files/figure-markdown_strict/unnamed-chunk-1-1.png)
+
+A majority of the values are above zero, and both distributions are
+skewed right, suggesting that red reflectance tended to increase
+following Florence in the region. Many of the negative values are found
+further offshore, where the ocean is deeper and sediment discharge mixes
+out quickly. The histograms are very similar, but neither are truly
+unimodal. A limitation of using composite images is that, while
+generally cloud-free, two neighboring pixels may have been obtained from
+any of the eight days in the composite, which is notable in examining
+changes over the scale of weeks. I compared spatial autocorrelation in
+the two difference images by creating empirical semivariograms of the
+rasters. The code can be found in the following two chunks.
+
+    #Creates empirical semivariogram of raster values
+    #BEFORE RUNNING:
+    #> Uncomment package installation as needed
+    #> Correct filepath as needed
+    #> Run section one first
+    #> Then correct nrow value using summary output; run balance of code
+
+    #SECTION ONE FOR SEMIVARIOGRAM
+    ##install.packages("gstat")
+    library(gstat)
+
+    ## Registered S3 method overwritten by 'xts':
+    ##   method     from
+    ##   as.zoo.xts zoo
+
+    #correct filepath below as needed
+    changerast <- raster(x = "compositediff.tif")#filepath for desired tiff (composite or single-day)
+
+    #Need dataframe for semivariogram
+    spatialpoints <- as(changerast, 'SpatialPointsDataFrame')
+    #There are na values in dataframe from masked out pixels
+    spatialpoints <- na.omit(spatialpoints)
+    #Summary command displays how many values there are in the raster
+    #Will need this number below
+    summary(spatialpoints)
+
+    ## Object of class SpatialPointsDataFrame
+    ## Coordinates:
+    ##        min      max
+    ## x -7007836 -6777570
+    ## y  3772987  3971285
+    ## Is projected: TRUE 
+    ## proj4string :
+    ## [+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181
+    ## +units=m +no_defs]
+    ## Number of points: 69813
+    ## Data attributes:
+    ##  compositediff      
+    ##  Min.   :-1031.000  
+    ##  1st Qu.:  -18.000  
+    ##  Median :    9.000  
+    ##  Mean   :    9.652  
+    ##  3rd Qu.:   31.000  
+    ##  Max.   : 1083.000
+
+The summary command displays how many values there are in the raster.
+The composite and single-day difference images have a different number
+of pixels in them because of the cloud mask I applied. This values needs
+to be fixed in the first line of runnable code below (nrow = x).
+
+    #SECTION TWO FOR SEMIVARIOGRAM
+    #create new data frame with lat/lon data in km rather than degrees
+    #nrow value before should be equal to the number of values in the raster found above
+    #Correct title of plot in ggplot as needed (single day vs. difference)
+    spatialpointskm <- data.frame(matrix(nrow = 69813))
+    #1 deg lat is ~110 km worldwide
+    spatialpointskm$y <- 110.*(spatialpoints$y-3800000)/100000
+    #1 deg lon is ~90 km at this latitude
+    spatialpointskm$x <- 90.*(spatialpoints$x + 7000000)/100000
+    #z variable remains unchanged
+    spatialpointskm$deltaref <- spatialpoints$compositediff
+
+    #create and display variogram
+    thevariogram <- variogram(deltaref~1, loc= ~x + y, data = spatialpointskm)
+    ggplot(thevariogram, aes(x = dist, y = gamma)) +
+      geom_point() + 
+      xlab("Distance (km)") +
+      ylab("Gamma") + 
+      ggtitle("Emp. Semivariogram for Difference Image")
+
+![](dburow_finalproj_files/figure-markdown_strict/unnamed-chunk-3-1.png)
+
+A combined png of both semivariograms can be found at
+<a href="https://github.com/dburow/GEOL590final/blob/master/variograms_comb.png" class="uri">https://github.com/dburow/GEOL590final/blob/master/variograms_comb.png</a>.
+The gamma values for both semivariograms level off at a distance of
+about 60 kilometers, suggesting that strong autocorrelation is found at
+distances less than this. The histograms are also similar. These
+findings suggest that using composite images for this analysis does not
+play a substantial role in altering the difference maps shown at
+<a href="https://github.com/dburow/GEOL590final/blob/master/compositediffmap.png" class="uri">https://github.com/dburow/GEOL590final/blob/master/compositediffmap.png</a>
+and
+<a href="https://github.com/dburow/GEOL590final/blob/master/singledaydiffmap.png" class="uri">https://github.com/dburow/GEOL590final/blob/master/singledaydiffmap.png</a>.
+This may be because the composite images drew heavily from the
+single-day 27 Sept and 13 Oct images, which exhibited the least
+cloud-contamination in each composite.
+
+REFERENCES:
+
+Chen, S., Y. Lu, P. Dash, P. Das, J. Li, K. Capps, H. Majidzadeh, and M.
+Elliot. 2019. Hurricane pulses: Small watershed exports of dissolved
+nutrients and organic matter during large storms in the Southeastern
+USA. *Science of the Total Environment*. 689:232-244.
+
+Joshi, I., E. D’Sa, C. Osburn, and T. Bianchi. 2017. Turbidity in
+Apalachicola Bay, Florida from Landsat 5 TM and field data: Seasonal
+patterns and response to extreme events. *Remote Sensing*. 9:367.
+
+Miller, R., and B. McKee. 2004. Using MODIS Terra 250 m imagery to map
+concentrations of total suspended matter in coastal waters. *Remote
+Sensing of the Environment*. 93:259-266.
+
+Raymond, P., J. Saiers, and W. Sobczak. 2016. Hydrological and
+biogeochemical controls on watershed dissolved organic matter transport:
+Pulse-shunt concept. *Ecology*. 97:5-16.
+
+Stewart, S., and R. Berg. “National Hurricane Center Tropical Cyclone
+Report: Hurricane Florence”. 30 May 2019. Available online at:
+<a href="https://www.nhc.noaa.gov/data/tcr/AL062018_Florence.pdf" class="uri">https://www.nhc.noaa.gov/data/tcr/AL062018_Florence.pdf</a>

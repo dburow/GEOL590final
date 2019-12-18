@@ -1,6 +1,6 @@
 ---
 title: "dburow_finalproj"
-output: html_document
+output: md_document
 ---
 
 Hurricane Florence made landfall near Wrightsville Beach, North Carolina, on 14 September 2018 (Stewart and Berg 2019). Florence moved very slowly through the region, and its long residence time allowed for extreme precipitation totals that exceeded 20 inches in much of the coastal North Carolina region. Precipitation pulses such as this one affect the hydrological cycle by washing organic matter and increasing runoff into local rivers (Raymond et al. 2016; Chen et al. 2019). 
@@ -24,8 +24,8 @@ library(ggplot2)
 library(raster)
 
 #Filepaths in following two lines will need to be changed as needed
-change1 <- raster(x = "C:/Users/danie/Downloads/GEOL590/finalproj/tiffs/compositediff.tif")#filepath for composite tif
-change2 <- raster(x = "C:/Users/danie/Downloads/GEOL590/finalproj/tiffs/singledaydiff.tif")#filepath for single-day tif
+change1 <- raster(x = "compositediff.tif")#filepath for composite tif
+change2 <- raster(x = "singledaydiff.tif")#filepath for single-day tif
 #Define rasters as data frames makes them work in ggplot
 change1_df <- as.data.frame(values(change1))
 change2_df <- as.data.frame(values(change2))
@@ -83,7 +83,7 @@ A majority of the values are above zero, and both distributions are skewed right
 library(gstat)
 
 #correct filepath below as needed
-changerast <- raster(x = "C:/Users/danie/Downloads/GEOL590/finalproj/tiffs/compositediff.tif")#filepath for desired tiff (composite or single-day)
+changerast <- raster(x = "compositediff.tif")#filepath for desired tiff (composite or single-day)
 
 #Need dataframe for semivariogram
 spatialpoints <- as(changerast, 'SpatialPointsDataFrame')
